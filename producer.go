@@ -60,9 +60,9 @@ func (p *producer) WithFilter(f Filter) Producer {
 	return p
 }
 
-func (p *producer) WithZeroFilter() Producer               { return p.WithFilter(zeroFilter) }
-func (p *producer) WithEvenFilter() Producer               { return p.WithFilter(evenFilter) }
-func (p *producer) WithOddFilter() Producer                { return p.WithFilter(oddFilter) }
+func (p *producer) WithZeroFilter() Producer { return p.WithFilter(zeroFilter) }
+func (p *producer) WithEvenFilter() Producer { return p.WithFilter(evenFilter) }
+func (p *producer) WithOddFilter() Producer  { return p.WithFilter(oddFilter) }
 func (p *producer) WithMinMaxFilter(min, max int) Producer {
 	return p.WithFilter(func(m Message) bool { return m.Value >= min && m.Value <= max })
 }
