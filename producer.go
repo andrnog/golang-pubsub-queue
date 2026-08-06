@@ -1,6 +1,9 @@
 package pubsubqueue
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 // Producer публикует сообщения в очередь.
 type Producer interface {
@@ -22,6 +25,7 @@ type Producer interface {
 type producer struct {
 	q       *queue
 	filters []Filter
+	mu      sync.RWMutex
 }
 
 func newProducer(q *queue) *producer {
@@ -39,6 +43,8 @@ func (p *producer) Publish(value int) error {
 		return fmt.Errorf("%w: %s", ErrQueueClosed, p.q.name)
 	}
 
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	draft := Message{Value: value}
 	for _, f := range p.filters {
 		if !f(draft) {
@@ -56,6 +62,9 @@ func (p *producer) Publish(value int) error {
 }
 
 func (p *producer) WithFilter(f Filter) Producer {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.filters = append(p.filters, f)
 	return p
 }
