@@ -32,18 +32,18 @@ func newProducer(q *queue) *producer {
 // Фильтры применяются к черновику с ID=0 до присвоения реального ID,
 // поэтому предикаты не должны опираться на поле ID.
 func (p *producer) Publish(value int) error {
-	draft := Message{Value: value}
-	for _, f := range p.filters {
-		if !f(draft) {
-			return nil // сообщение отфильтровано
-		}
-	}
-
 	p.q.mu.RLock()
 	defer p.q.mu.RUnlock()
 
 	if p.q.closed {
 		return fmt.Errorf("%w: %s", ErrQueueClosed, p.q.name)
+	}
+
+	draft := Message{Value: value}
+	for _, f := range p.filters {
+		if !f(draft) {
+			return nil // сообщение отфильтровано
+		}
 	}
 
 	m := newMessage(value)
