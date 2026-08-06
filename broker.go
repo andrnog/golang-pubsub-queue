@@ -1,6 +1,8 @@
 package pubsubqueue
 
-import "sync"
+import (
+	"sync"
+)
 
 // Broker управляет именованными очередями и их producer'ами.
 type Broker interface {
@@ -10,8 +12,9 @@ type Broker interface {
 }
 
 type broker struct {
-	mu     sync.Mutex
-	queues map[string]*queue
+	mu       sync.Mutex
+	queues   map[string]*queue
+	isClosed bool // флаг закрытия брокера. Если закрыт - кидаем панику. По аналогии с записью в закрытый канал
 }
 
 func NewBroker() Broker {
@@ -31,14 +34,24 @@ func (b *broker) NewProducer(queueName string) Producer {
 func (b *broker) Close() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
+	if b.isClosed {
+		return
+	}
+
+	b.isClosed = true
 	for _, q := range b.queues {
 		q.closeQueue()
 	}
+	clear(b.queues)
 }
 
 func (b *broker) getOrCreate(name string) *queue {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.isClosed {
+		panic("broker is closed")
+	}
 	if q, ok := b.queues[name]; ok {
 		return q
 	}
