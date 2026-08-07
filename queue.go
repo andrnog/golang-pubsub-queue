@@ -73,10 +73,15 @@ func (q *queue) closeQueue() {
 func (q *queue) deliver() {
 	for m := range q.buf {
 		q.cmu.Lock()
+		targets := make(map[*consumer]struct{}, len(q.consumers))
 		for c := range q.consumers {
-			c.push(m)
+			targets[c] = struct{}{}
 		}
 		q.cmu.Unlock()
+
+		for c := range targets {
+			c.push(m)
+		}
 	}
 
 	// Буферный канал закрыт — уведомляем всех оставшихся consumer'ов.
