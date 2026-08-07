@@ -91,9 +91,8 @@ func TestProducerFullQueue(t *testing.T) {
 	// Bypass broker/deliver so the channel buffer actually fills up.
 	// deliver() drains q.buf continuously, so we skip it intentionally here.
 	q := &queue{
-		name:      "tiny",
-		buf:       make(chan Message, 1),
-		consumers: make(map[*consumer]struct{}),
+		name: "tiny",
+		buf:  make(chan Message, 1),
 	}
 	p := newProducer(q)
 
