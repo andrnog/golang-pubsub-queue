@@ -25,7 +25,7 @@ func waitGoroutines(t *testing.T, target int, timeout time.Duration) {
 	}
 }
 
-// TestNoGoroutineLeak проверяет главный сценарий БЛОКЕРА 1: после закрытия
+// TestNoGoroutineLeak: после закрытия
 // брокера и вычитывания каналов не должно остаться фоновых горутин (deliver
 // обязан выйти при закрытии q.buf).
 func TestNoGoroutineLeak(t *testing.T) {

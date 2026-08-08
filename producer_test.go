@@ -88,8 +88,11 @@ func TestProducerClosedQueue(t *testing.T) {
 }
 
 func TestProducerFullQueue(t *testing.T) {
-	// Bypass broker/deliver so the channel buffer actually fills up.
-	// deliver() drains q.buf continuously, so we skip it intentionally here.
+	// Точечно покрываем ветку ErrQueueFull в Publish. С живым deliver() буфер
+	// q.buf почти не наполняется (deliver непрерывно его вычитывает), поэтому
+	// эту ветку изолируем: конструируем очередь без deliver и с буфером на 1.
+	// Backpressure на уровне системы проверяется отдельно (TestStressManyProducers,
+	// TestPublishNeverBlocksWithDeadConsumer).
 	q := &queue{
 		name: "tiny",
 		buf:  make(chan Message, 1),
