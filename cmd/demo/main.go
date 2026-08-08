@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	pubsubqueue "github.com/andrnog/golang-pubsub-queue"
 )
@@ -110,17 +111,36 @@ func main() {
 	iso2.Close()
 	fmt.Println()
 
-	fmt.Println("5. Неблокирующая публикация: переполнение буфера")
+	fmt.Println("5. Backpressure: неблокирующая публикация при неработающем подписчике")
 
-	overP := broker.NewProducer("переполнение")
-	dropped := 0
+	bpQ := broker.Queue("backpressure")
+	slow := bpQ.Subscribe() // подписчик, который не читает
+	bpP := broker.NewProducer("backpressure")
 
-	for i := 0; i < 200; i++ {
-		if err := overP.Publish(i); err != nil {
-			dropped++
+	const total = 1000
+	for i := 0; i < total; i++ {
+		bpP.Publish(i) // никогда не блокирует, даже если никто не читает
+	}
+
+	// Даём deliver разгрести очередь, затем считаем, сколько реально осело
+	// в ограниченном буфере consumer'а — остальное отброшено backpressure.
+	time.Sleep(50 * time.Millisecond)
+
+	buffered := 0
+	draining := true
+	for draining {
+		select {
+		case <-slow.Messages():
+			buffered++
+		default:
+			draining = false
 		}
 	}
-	fmt.Printf("   Отправлено: 200, дропнуто: %d (Publish никогда не блокирует)\n", dropped)
+
+	fmt.Printf("   Опубликовано: %d, осело в буфере consumer'а: %d, отброшено: %d\n",
+		total, buffered, total-buffered)
+	fmt.Println("   (Publish ни разу не заблокировался)")
+	slow.Close()
 	fmt.Println()
 
 	fmt.Println("=== End ===")

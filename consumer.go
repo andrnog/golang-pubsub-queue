@@ -85,13 +85,22 @@ func (c *consumer) push(m Message) {
 	if c.closed {
 		return
 	}
+
+	// Кладём в pending ДО отправки: как только сообщение попадёт в канал, читатель
+	// может тут же его получить и вызвать Ack — к этому моменту pending уже должен
+	// знать о сообщении, иначе Ack промахнётся и запись повиснет навсегда.
+	c.pmu.Lock()
+	c.pending[m.ID] = m
+	c.pmu.Unlock()
+
 	select {
 	case c.ch <- m:
-		c.pmu.Lock()
-		c.pending[m.ID] = m
-		c.pmu.Unlock()
+		// доставлено
 	default:
-		// буфер полон — дропаем (at-most-once)
+		// буфер полон — сообщение не доставлено, откатываем pending (at-most-once)
+		c.pmu.Lock()
+		delete(c.pending, m.ID)
+		c.pmu.Unlock()
 	}
 }
 
